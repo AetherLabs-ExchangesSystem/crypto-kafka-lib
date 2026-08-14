@@ -39,6 +39,8 @@ data class KafkaConsumerConfig (
     fun kafkaListenerContainerFactory(): ConcurrentKafkaListenerContainerFactory<String, ByteArray> {
         val factory = ConcurrentKafkaListenerContainerFactory<String, ByteArray>()
         factory.setConsumerFactory(consumerFactory())
+        // Enable manual acknowledgment mode to prevent message loss
+        factory.containerProperties.ackMode = org.springframework.kafka.listener.ContainerProperties.AckMode.MANUAL
         return factory
     }
 }

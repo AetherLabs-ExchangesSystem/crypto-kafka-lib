@@ -15,6 +15,8 @@ import java.util.HashMap;
 data class KafkaProducerConfig (
     @Value("\${kafka.bootstrap-servers}")
     private val kafkaServerUrl: String,
+    @Value("\${spring.kafka.producer.properties.max.request.size:1048576}")
+    private val maxRequestSize: Int,
 ) {
 
     @Bean
@@ -23,6 +25,7 @@ data class KafkaProducerConfig (
         configProps[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaServerUrl
         configProps[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
         configProps[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
+        configProps[ProducerConfig.MAX_REQUEST_SIZE_CONFIG] = maxRequestSize
         return DefaultKafkaProducerFactory(configProps)
     }
 
