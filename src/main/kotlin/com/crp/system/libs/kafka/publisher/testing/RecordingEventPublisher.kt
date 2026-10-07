@@ -65,6 +65,12 @@ class RecordingEventPublisher @JvmOverloads constructor(
             else -> CompletableFuture.completedFuture(PublishResult(channel, topic.orEmpty(), key, 0, offsets.getAndIncrement(), 1, Duration.ZERO))
         }
 
+    override fun publishJsonWithResult(topic: String?, key: String?, json: String?, headers: Map<String, String?>?): CompletableFuture<PublishResult> =
+        when (val outcome = accept(topic, key, null, headers) { json ?: throw IllegalArgumentException("publishJsonWithResult called with null json") }) {
+            is PublishFailure -> CompletableFuture.failedFuture(PublishFailedException(outcome))
+            else -> CompletableFuture.completedFuture(PublishResult(channel, topic.orEmpty(), key, 0, offsets.getAndIncrement(), 1, Duration.ZERO))
+        }
+
     fun clear() {
         events.clear()
         rejected.clear()

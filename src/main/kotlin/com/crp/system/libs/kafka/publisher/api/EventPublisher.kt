@@ -1,6 +1,7 @@
 package com.crp.system.libs.kafka.publisher.api
 
 import java.util.concurrent.CompletableFuture
+import java.time.Instant
 
 /**
  * The only thing business code calls. One instance per channel (`crypto.kafka.publisher.channels.<name>`).
@@ -34,6 +35,19 @@ interface EventPublisher {
         event: Any?,
         headers: Map<String, String?>? = emptyMap(),
     ): CompletableFuture<PublishResult>
+
+    /**
+     * Sends opaque JSON unchanged; success means broker acknowledgement, never queue admission.
+     * Legacy implementations safely fail until they implement acknowledged raw publication.
+     */
+    fun publishJsonWithResult(
+        topic: String?, key: String?, json: String?, headers: Map<String, String?>? = emptyMap(),
+    ): CompletableFuture<PublishResult> = CompletableFuture.failedFuture(
+        PublishFailedException(PublishFailure(channel, topic.orEmpty(), key,
+            PublishFailureStage.CHANNEL_UNAVAILABLE, 0, false,
+            UnsupportedOperationException("acknowledged raw JSON publication is not implemented"), null, Instant.now())),
+    )
+
 }
 
 /** The catalog of configured channels. */
