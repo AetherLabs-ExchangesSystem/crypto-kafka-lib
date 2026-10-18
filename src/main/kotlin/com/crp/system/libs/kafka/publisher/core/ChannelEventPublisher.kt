@@ -73,6 +73,11 @@ internal class ChannelEventPublisher(
             accept(topic, key, headers, result) { serializer.serialize(event ?: throw IllegalArgumentException("publishWithResult called with a null event")) }
         }
 
+    override fun publishJsonWithResult(topic: String?, key: String?, json: String?, headers: Map<String, String?>?): CompletableFuture<PublishResult> =
+        CompletableFuture<PublishResult>().also { result ->
+            accept(topic, key, headers, result) { json ?: throw IllegalArgumentException("publishJsonWithResult called with null json") }
+        }
+
     /** Caller thread. Never throws: bad arguments and an Error from a serializer (a cyclic graph) are failures too. */
     private fun accept(
         topic: String?,

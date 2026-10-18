@@ -18,4 +18,7 @@ internal class DisabledEventPublisher(override val channel: String, private val 
         CompletableFuture.failedFuture(
             PublishFailedException(PublishFailure(channel, topic.orEmpty(), key, CHANNEL_UNAVAILABLE, 0, false, null, null, clock.instant())),
         )
+    override fun publishJsonWithResult(topic: String?, key: String?, json: String?, headers: Map<String, String?>?): CompletableFuture<PublishResult> =
+        publishWithResult(topic, key, json, headers)
+
 }

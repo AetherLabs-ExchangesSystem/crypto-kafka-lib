@@ -47,6 +47,11 @@ dependencies {
     // Metrics: only used when the service has Micrometer and a MeterRegistry bean
     compileOnly 'io.micrometer:micrometer-core'
     
+    // Optional durable MySQL provider; callers supply their existing R2DBC runtime and driver.
+    compileOnly 'org.springframework:spring-r2dbc'
+    compileOnly 'org.springframework:spring-tx'
+    compileOnly 'io.projectreactor:reactor-core'
+
     // Annotations
     compileOnly 'jakarta.annotation:jakarta.annotation-api:2.1.1'
 
@@ -54,11 +59,14 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-actuator'
     testImplementation 'io.micrometer:micrometer-core'
+    testImplementation 'org.springframework:spring-r2dbc'
+    testImplementation 'org.springframework:spring-tx'
+    testImplementation 'io.asyncer:r2dbc-mysql:1.0.5'
 }
 
 tasks.withType(KotlinCompile) {
     kotlinOptions {
-        freeCompilerArgs += '-Xjsr305=strict'
+        freeCompilerArgs += ['-Xjsr305=strict', '-Xjvm-default=all-compatibility']
         jvmTarget = '17'
     }
 }
@@ -71,8 +79,15 @@ tasks.withType(Test).configureEach {
     }
 }
 
+def withoutR2dbc = { file ->
+    !['spring-r2dbc', 'r2dbc-', 'reactor-core', 'reactive-streams'].any { file.name.startsWith(it) }
+}
+
 tasks.named('test') {
+    classpath = sourceSets.test.runtimeClasspath.filter(withoutR2dbc)
+    exclude '**/durable/mysql/**'
     exclude '**/nomicrometer/**'
+    exclude '**/nordbc/**'
 }
 
 // The lib must load and work in a service without Micrometer: run that test with micrometer-core
@@ -81,7 +96,7 @@ def testWithoutMicrometer = tasks.register('testWithoutMicrometer', Test) {
     description = 'Runs the no-Micrometer tests with micrometer-core and the actuator removed from the classpath.'
     group = 'verification'
     testClassesDirs = sourceSets.test.output.classesDirs
-    classpath = sourceSets.test.runtimeClasspath.filter { file ->
+    classpath = sourceSets.test.runtimeClasspath.filter(withoutR2dbc).filter { file ->
         !['micrometer-core', 'micrometer-jakarta9', 'spring-boot-actuator', 'HdrHistogram', 'LatencyUtils'].any { file.name.startsWith(it) }
     }
     include '**/nomicrometer/**'
@@ -99,3 +114,21 @@ publishing {
         }
     }
 }
+
+// Existing services must still load without the optional database provider runtime.
+def testWithoutR2dbc = tasks.register('testWithoutR2dbc', Test) {
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath.filter(withoutR2dbc)
+    include '**/nordbc/**'
+}
+tasks.named('check') { dependsOn testWithoutR2dbc }
+
+def durableMysqlTest = tasks.register('durableMysqlTest', Test) {
+    description = 'Opt-in real MySQL durability tests with optional provider dependencies.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    include '**/durable/mysql/**'
+}
+tasks.named('check') { dependsOn durableMysqlTest }
